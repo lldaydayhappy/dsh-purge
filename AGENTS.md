@@ -1,7 +1,7 @@
 # AGENTS.md — 给 AI agent 的 Purge 使用说明书
 
 > 这份文件是写给**在 DSH 里干活的 agent** 的，不是营销文档。
-> 当前版本：**1.6.50** · 适配 DSH Desktop **0.2.1-rc.2**（rc.1 同样通过）
+> 当前版本：**1.6.55** · 适配 DSH Desktop **0.2.1-rc.3**（rc.1 / rc.2 同样通过）
 > 版本号由 `npm run check:docs` 与 `package.json` 校验，发版必须同步。
 
 ---
@@ -133,8 +133,8 @@ purge-community probe new
 
 | 组件 | 值 |
 | --- | --- |
-| 插件 | `dsh-purge-community` 1.6.50 |
-| 已验证宿主 | DSH Desktop 0.2.1-rc.1 / 0.2.1-rc.2 |
+| 插件 | `dsh-purge-community` 1.6.55 |
+| 已验证宿主 | DSH Desktop 0.2.1-rc.1 / 0.2.1-rc.2 / 0.2.1-rc.3 |
 | 其它宿主 | 允许应用，但 `selfcheck` 会标"未验证"；先看 `diagnose` |
 | Node | ≥18（桌面版自带运行时即可） |
 
@@ -172,6 +172,8 @@ Windows Desktop 的 exe 是 GUI 子系统。PowerShell 的 `& exe ...` 可能在
 `desktop` profile 由 Electron 应用初始化；普通 `--profile desktop --dump-config` 会报 managed exclusively，不能因此判断程序坏了，也不能手造“已接受协议/已登录”的记录。隔离实测明确设置 DSH_HOME 与独立 user-data-dir，不碰默认用户目录，不自动应用宿主补丁。界面/登录/完整补丁能力与安装、备份、回滚分别记录；遇到协议或登录确认交给用户决定。
 
 macOS 开发验收不能再复制同名 `.app` 后直接运行，也不能回退使用正式 DSH 可执行文件。使用命令行专用副本、独立测试标识和操作系统写入限制；完整安装/迁移/回滚方法与测试边界见 [隔离验收](docs/INSTALLATION.md#isolated-acceptance)。这条是维护者测试规则，不改变用户正常安装入口。
+
+通用安装验收使用实际 CLI/pnpm 执行首次安装、旧包/旧别名迁移、升级、回滚及失败恢复，校验备份后追加的用户内容。`scripts/check-install-lifecycle-runtime.mjs` 必须由隔离 Electron 的 Node 模式执行，不能拿正式 DSH 或手写 profile 冒充；说明见 [PR #78 验收记录](docs/pr78-runtime-integrity.md)。报告需区分组件模拟、实际 CLI 事务、缓存复用和未测的 UI/宿主功能，不能以一种通过代替另一种。
 
 PowerShell 5.1 读取 UTF-8 JSON/文档应使用 `Get-Content -Raw -Encoding UTF8`，不要把默认 ANSI 解码造成的中文乱码误判为安装包损坏。
 
@@ -353,3 +355,22 @@ Windows Electron 的递归删除可能进入 Junction。清理使用 `removeTree
 不要把用户正文包含模板标记当成默认值。自定义、手改、记录缺失或损坏的非空正文保留；仅精确匹配可证明来源的默认内容允许自动刷新。读取失败保留错误，不把失败当空文件。已丢内容只能从用户确认的稿件或备份恢复，不自动回滚整份配置。
 
 版本对账只读当前 profile 的启用入口及真实包身份，支持 `dsh-purge-community` 与 `dsh-purge` 别名；pnpm 的 YAML 从物理包目录解析。缺包、错误身份、多个不同副本继续报错；不要改名目录、删锁文件或清空 update-status.json 来消除告警。旧版对账失败会阻止自动安装，使用新版独立安装器原地升级，之后由用户手动重启。别名回滚保留原依赖名与用户后续编辑；回滚旧版会带回其旧缺陷。详见 [维护说明](docs/maintenance-issues-72-74.md)。
+
+## PR #78：安装目标与架构运行时
+
+目标应用使用显式路径和包结构校验；不要仅凭 `app.asar` 存在或名称含 DSH 判定为宿主。自定义位置先设置 `DSH_APP` / `DSH_EXE`，多个有效目标请让用户明确选择。不要遍历挂载卷或任意父目录，不要在目标校验失败后改用另一份应用。macOS 的 XML/二进制 plist 均经系统解析；无效字段、越界路径和符号链接保持报错，不用猜测的可执行文件消除错误。
+
+按实际运行进程的架构定位运行时。架构目录存在不等于 CLI 可以加载；需要实际执行 pnpm 和安装事务。已有有效链接或真实目录不能为迁就新布局被直接覆盖。测试必须使用带标记的新隔离副本；`scripts/check-architecture-runtime.mjs` 会调整测试副本的布局，只能用于一次性验收环境，不能对正式应用运行。具体证据和边界见 [PR #78 验收记录](docs/pr78-runtime-integrity.md)。
+
+## 28. 不做公网门禁（1.6.52）
+
+- 本 fork **没有**「目标解析到公网就拒绝」的门禁。上游 1.1.74–1.1.77 曾在 `agent/pre-step` 里塞「不行，这是严令禁止的」并清空本轮消息，本版已连判定逻辑一起删除。
+- 不要以「靶场限制」「公网门禁」为由恢复这段代码；需要限制范围由操作者自己声明，插件不替用户判断目标归属。
+- `lib/net-scope.js` 只剩白名单文件 API（`readAllowText` / `writeAllowText` / `normalizeAllowText`）与 `ownServerNote()`（空实现）；`test/no-region-gate.test.mjs` 会在有人重新引入安装器或 `严令禁止` 时直接失败。
+- 上游的 ReDoS 窗口扫描只为那个门禁服务，未采纳；`already queued` 的补丁改写与 pnpm postinstall 也未采纳，原因见 1.6.52 发行说明。
+
+## 1.6.54：旧运行时链接与应用失败诊断（#79 / #77）
+
+升级遇到 `Desktop CLI runtime repair failed` 时，查看同一次响应的 `cli_repair`，不要断言用户没点应用。只有同一安装的 `app/runtime` 链接指向外层 `runtime`，且当前架构目录及 pnpm 加载器均解析在该运行时内，才备份链接并迁移。真实目录、其他活链接、越界与权限错误仍停止；不删除目标目录。创建/校验失败恢复原链接；恢复失败保留备份并显式报错。
+
+界面显示具体 reason、错误码、启动器错误与恢复结果，不上传整份响应、提示词或配置。用户仍报错时收集操作系统/架构、客户端发行名称/版本、插件实际运行版本、详细错误；预设消失需单独确认，不能仅凭总报错认定同源。不自动 apply 或重启。实际验证范围见 [#79 维护记录](docs/maintenance-issue-79.md)。

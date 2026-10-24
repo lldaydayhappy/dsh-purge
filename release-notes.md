@@ -1,3 +1,75 @@
+# 1.6.55
+
+## 侧栏与面板标题改回「Purge」
+
+1.6.51 把界面上显示的名字改成了「dsh-purge Community」，侧栏条目也跟着变了。本版改回 **Purge**：
+
+- 侧栏条目 `label`：`Purge`
+- 面板主标题 `h1`：`Purge`
+- 设置页分组标题 `h2`：`Purge`
+
+包名、命令名、数据目录都不变，仍是 `dsh-purge-community` / `purge-community`，只是显示名回到大字写。
+
+## 验证
+
+`npm test` 320 通过 / 0 失败；两份 bundle 重建后 `check:client` 通过。
+
+# 1.6.54
+
+## 旧运行时链接迁移与错误详情（#79 / #77）
+
+- 从平铺运行时升级到架构子目录时，识别同一安装的旧 runtime 链接，先备份再迁移；保留真实目录、其他目标链接和目标文件。
+- 迁移创建/验证失败恢复原链接；恢复失败明确报告并保留备份，不掩盖权限、缺文件和路径冲突。
+- 应用失败显示具体运行时原因、错误码、启动器错误及恢复状态；不再丢弃后端诊断详情，不展开用户提示词或完整配置。
+- 恢复默认测试命令中的桌面目标识别测试，并补充迁移、失败恢复和真实 HTTP 错误解析回归。
+
+测试证据及边界见 [维护记录](docs/maintenance-issue-79.md)。不自动重启，不修改用户设置。此修复覆盖已复现的运行时布局问题；报告者的具体环境及预设重启后消失仍待确认。
+
+# 1.6.53
+
+## DSH 0.2.1-rc.3：验证通过，加入已核验清单
+
+rc.3 更新后实测：
+
+- `diagnose`：**80 条补丁全部命中**（checked 80 / drifted 0 / missing 0），唯一 `optionalDrift` 是第三方目标；
+- 更新时宿主被重新解包（`app.asar` 移走 + 补丁重写），`applied.json` 记录到 1.6.50，进程随后以 rc.3 启动；
+- 逐条对照 rc.2 与 rc.3 的操作面字符串，没有发现新的拒绝话术：`file access denied`、`do not retry another way`、
+  `rejected automatically` 这些位置要么已被本插件覆盖，要么只剩 UI/工具描述里的无关文本；
+- `dsh-user-approval` 的审批句、`dsh-tool-bash`/`dsh-tool-pwsh` 的沙箱话术仍在原来的锚点上，补丁继续生效。
+
+因此把 `0.2.1-rc.3` 加入 `QUALIFIED_HOST_VERSIONS`，自检不再对它报「未在已验证清单内」。
+
+## 验证
+
+`npm test` 320 通过 / 0 失败；rc.3 上 `selfcheck` 25/25 ok。
+
+# 1.6.52
+
+## 移除「公网目标一律拒绝」的门禁
+
+上游 1.1.74–1.1.77 的 `net-scope` 会在 `agent/pre-step` 里判断：任务像攻击 + 目标解析到公网 IP →
+直接塞一句「不行，这是严令禁止的」并把这一轮消息清空。本 fork 一直带着这段代码（1.1.71 遗产），
+等于把破甲限制成「只能打内网/靶场」。
+
+本版把门禁连同判定逻辑一起删除：`installRegionGate`、`isAttackTask`、`taskTargetHit`、
+`DENIAL` 与配套的 chunks 全部移除。白名单文件 API（`readAllowText` / `writeAllowText` /
+`normalizeAllowText` / `ownServerNote`）保留，设置卡不受影响。
+
+新增 `test/no-region-gate.test.mjs` 钉住：`net-scope` 不再导出安装器，`lib/index.js` 不再引用它。
+
+## 上游修复的评估（未采纳项）
+
+- **1.1.77 的 ReDoS 窗口扫描**：只服务于上面那个门禁，门禁删掉后没有意义。
+- **1.1.74/1.1.75 的「already queued」补丁改写**：上游改成只 patch 已入队行、不再 insert；
+  我们的安装器会主动把包从 `bundles` 里移除并用 insert 建行，改成上游写法会让安装器路径失效，
+  暂不采纳。本机 profile 同时存在 bundle 与 insert 也未报错，风险未在 0.2.1-rc.2 上复现。
+- **1.1.76 的 pnpm postinstall 写 bundles**：我们的安装器已负责写 bundles；市场安装由宿主写，
+  不额外加 postinstall。
+
+## 验证
+
+`npm test` 312 通过 / 0 失败；`check:docs` / `check:client` / `smoke` 通过。
+
 # 1.6.50
 
 ## 文案：把「尚未安排换包」改成能看懂的话
