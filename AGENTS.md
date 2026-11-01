@@ -1,7 +1,7 @@
 # AGENTS.md — 给 AI agent 的 Purge 使用说明书
 
 > 这份文件是写给**在 DSH 里干活的 agent** 的，不是营销文档。
-> 当前版本：**1.6.67** · 适配 DSH Desktop **0.2.1-rc.5**（rc.1 / rc.2 / rc.3 同样通过）
+> 当前版本：**1.6.68** · 适配 DSH Desktop **0.2.1-rc.5**（rc.1 / rc.2 / rc.3 同样通过）
 > 版本号由 `npm run check:docs` 与 `package.json` 校验，发版必须同步。
 
 ---
@@ -133,7 +133,7 @@ purge-community probe new
 
 | 组件 | 值 |
 | --- | --- |
-| 插件 | `dsh-purge-community` 1.6.67 |
+| 插件 | `dsh-purge-community` 1.6.68 |
 | 已验证宿主 | DSH Desktop 0.2.1-rc.1 / 0.2.1-rc.2 / 0.2.1-rc.3 / 0.2.1-rc.5 |
 | 其它宿主 | 允许应用，但 `selfcheck` 会标"未验证"；先看 `diagnose` |
 | Node | ≥18（桌面版自带运行时即可） |
@@ -440,6 +440,7 @@ Web 子路径请求按实际插件脚本路径定位挂载点，根路径和桌�
 - 一条补丁可以声明 `disabledByDefault: true`；只有 `tuning.json` 的 `extraPatches` 列出它的 id 时才打。
 - CLI：`purge-community patches [list|enable 18,19|disable 19]`；开关后要**点一次「应用」**再退出重开。
 - 状态：`disabled` 表示"按选择关闭"，`patchStatusReady("disabled")` 为 true，自检计入明确不适用，不报红。
+- apply 汇总同口径：`disabled` 属于软通过（`ALWAYS_SOFT_STATUSES`），不计入 `failed`，于是面板不会在每次「应用」后报「N 项处理失败（#18,#19）」。真失败（写入错误、锚点不中）仍然计入。
 - 当前 opt-in 名单：
   - **#18 重复调用提醒关闭**：收益是工具循环提示词干净；代价是模型可能在同一处反复试错而没人提醒。
   - **#19 工具结果修剪关闭**：收益是能读到完整工具输出（大文件/长日志/完整 diff）；代价是上下文线性膨胀、更快触顶、更贵、长会话更容易答非所问。
